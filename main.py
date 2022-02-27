@@ -1,17 +1,17 @@
-from loader import bot, api_key
+from loader import bot
 import handlers
-import bd
-
 
 
 @bot.message_handler(content_types=['text'])
 def start(message) -> None:
     """
+
     Основной алгоритм бота. Алгоритм работает только при 6 командах,
     в остальных случаях просит ввести команду снова
     Параметры: словарь бота - message
     Подгружается модуль handlers для обработки соответствующей команды бота
     """
+
     if message.text == '/help' or message.text == '/start':
         bot.send_message(message.from_user.id, "/lowprice — вывод самых дешёвых отелей в городе, \n"
                                                "/highprice — вывод самых дорогих отелей в городе,\n"

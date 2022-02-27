@@ -1,3 +1,6 @@
+import datetime
+
+
 class Users:
     """
     Класс Запрос. Собирает информацию по текущему запросу для отправки затем в историю. При последующем запросе
@@ -5,36 +8,31 @@ class Users:
     """
     users = dict()
 
-    def __init__(self, datetime: str, user_id: str, city: str, city_id: str, count_hotel: int, perimeter: str,
-                 photo: str, price: str, checkout: str, checkin: str, team: str, count_photo: int, req_photo: str,
-                 answer: str):
-        self.datetime = datetime  # время запроса
+    def __init__(self, user_id: str):
+        self.datetime = datetime.datetime.now()  # время запроса
         self.user_id = user_id
-        self.city = city  # город запроса
-        self.city_id = city_id  # id города
+        self.city: str = None  # город запроса
+        self.city_id: str = None  # id города
         self.country: str = None  # страна запроса
-        self.count_hotel = count_hotel  # количество отелей в запросе
-        self.perimeter = perimeter  # удаленность от центра
-        self.photo = photo  # наличие фото
-        self.price = price  # цена в запросе
-        self.checkout = checkout  # дата заезда
-        self.checkin = checkin  # дата выезда
-        self.answer = answer  # ответ по запросу
-        self.team = team  # команда в запросе
-        self.count_photo = count_photo  # количество фото в запросе
-        self.req_photo = req_photo  # ссылки на фото
+        self.count_hotel = 0  # количество отелей в запросе
+        self.perimeter = ''  # удаленность от центра
+        self.photo = None  # наличие фото
+        self.price = ''  # цена в запросе
+        self.checkout = None  # дата заезда
+        self.checkin = None  # дата выезда
+        self.answer = None  # ответ по запросу
+        self.team = None  # команда в запросе
+        self.count_photo = 0  # количество фото в запросе
+        self.req_photo = None  # ссылки на фото
         Users.add_user(user_id, self)
 
     def __str__(self):
         return self.user_id
 
     @staticmethod
-    def get_user(datetime: str, user_id: str, city: str, city_id: str, count_hotel: int, perimeter: str,
-                 photo: str, price: str, checkout: str, checkin: str, team: str, count_photo: int, req_photo: str,
-                 answer: str):
+    def get_user(user_id: str):
         if Users.users.get(user_id) is None:
-            new_user = Users(datetime, user_id, city, city_id, count_hotel, perimeter, photo, price,
-                             checkout, checkin, team, count_photo, req_photo, answer)
+            new_user = Users(user_id)
             return new_user
         return Users.users.get(user_id)
 

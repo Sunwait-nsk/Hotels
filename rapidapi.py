@@ -1,15 +1,9 @@
-import re
 import requests
 import current
 from requests.exceptions import Timeout, ConnectionError
 import json
-import loader
-import bd
-from loader import logging
-import add_answer
-
-
-api_key = loader.api_key
+from loader import logging, api_key
+import re
 
 
 @logging
@@ -20,7 +14,7 @@ def hotel_id(cls) -> str:
     Выходные данные: ID города на сайте Hotel.com
     """
     # установочные данные
-    plenty_destination_id = []
+    plenty_destination_id = ''
     url = "https://hotels4.p.rapidapi.com/locations/v2/search"
     querystring = {"query": cls.city, "locale": "ru_RU", "currency": "RUB"}
     headers = {
@@ -37,7 +31,7 @@ def hotel_id(cls) -> str:
             data = json.loads(response.text)
             for element in data['suggestions'][0]['entities']:
                 if element['name'] == cls.city:
-                    plenty_destination_id.append(element['destinationId'])
+                    plenty_destination_id = element['destinationId']
                     plenty_city.append(element['name'])
     except Timeout:
         print('Ошибка таймаута')
@@ -47,7 +41,7 @@ def hotel_id(cls) -> str:
 
 
 @logging
-def hotels_list(cls) -> list:
+def hotels_list(cls) -> tuple:
     """
         Функция по работе с API.
         На входе получает класс с запросом и признаком команды поиска
@@ -113,7 +107,7 @@ def hotels_list(cls) -> list:
 
 
 @logging
-def hotels_list_bestdeal(cls) -> list:
+def hotels_list_bestdeal(cls) -> tuple:
 
     """
         Функция по работе с API для команды  bestdeal.

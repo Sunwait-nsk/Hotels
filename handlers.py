@@ -1,16 +1,10 @@
+from loader import logging, bot
 from utils import Users
-from loader import logging, bot, api_key
-from utils import Users
-import bd
-import datetime
-from requests import get
 from typing import Any
 import current
 import rapidapi
-import re
 import geo_city
 import add_history
-import find_answer
 import add_answer
 import read_history
 
@@ -21,8 +15,8 @@ def lowprice(message: Any) -> None:
     Функция для обработки команды lowprice.
     Запускает алгоритм функций для этой команды
     """
-    Users(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                 '/lowprice', 0, '', '')  # добавили пользователя по id
+    user = Users(message.from_user.id)  # добавили пользователя по id
+    user.team = '/lowprice'
     bot.send_message(message.from_user.id, "Введите город")
     bot.register_next_step_handler(message, get_city)
 
@@ -33,8 +27,8 @@ def highprice(message: Any) -> None:
         Функция для обработки команды highprice.
         Запускает алгоритм функций для этой команды
         """
-    Users(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                 '/highprice', 0, '', '')
+    user = Users(message.from_user.id)
+    user.team = '/highprice'
     bot.send_message(message.from_user.id, "Введите город")
     bot.register_next_step_handler(message, get_city)
 
@@ -45,8 +39,8 @@ def bestdeal(message: Any) -> None:
             Функция для обработки команды bestdeal.
             Запускает алгоритм функций для этой команды
             """
-    Users(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                 '/bestdeal', 0, '', '')
+    user = Users(message.from_user.id)
+    user.team = '/bestdeal'
     bot.send_message(message.from_user.id, "Введите город")
     bot.register_next_step_handler(message, get_city)
 
@@ -56,13 +50,18 @@ def history(message: Any) -> None:
     """
         Обработка команды /history
     """
-    request_user = Users(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                 '/history', 0, '', int(bd.id_answer()) + 1)
-    add_history.add_history(user_id=request_user.user_id, team=request_user.team, city=request_user.city,
-                            count_hotel=request_user.count_hotel, checkin=request_user.checkin,
-                            checkout=request_user.checkout, photo=request_user.photo,
-                            count_photo=request_user.count_photo, price=request_user.price,
-                            perimeter=request_user.perimeter)  # добавляем в БД history запрос
+    request_user = Users(message.from_user.id)
+    request_user.team = '/history'
+    request_user.answer = add_history.add_history(user_id=request_user.user_id,
+                                                  team=request_user.team,
+                                                  city=request_user.city,
+                                                  count_hotel=request_user.count_hotel,
+                                                  checkin=request_user.checkin,
+                                                  checkout=request_user.checkout,
+                                                  photo=request_user.photo,
+                                                  count_photo=request_user.count_photo,
+                                                  price=request_user.price,
+                                                  perimeter=request_user.perimeter)  # добавляем в БД history запрос
     bot.send_message(message.from_user.id, 'Последние 5 записей поиска')
     # вывод ответов по последним 5 запросам
     number = 0
@@ -84,8 +83,7 @@ def get_city(message: Any) -> None:
     """
     Обработка названия города и передача дальнейшего управления следующему модулю
     """
-    user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '', '',
-                          0, '', 0)
+    user = Users.get_user(message.from_user.id)
     user.city, user.country = '', ''
     # Обращаемся к БД городов, что бы получить список город на русском и страна на английском
     # заодно проверяем корректность названия города. В противном случае бот запрашивает город заново
@@ -108,8 +106,7 @@ def get_city(message: Any) -> None:
 @logging
 def get_current_hotel(message: Any) -> None:
     """фунция запрос диапозона цен отелей """
-    user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '', '',
-                          0, '', 0)
+    user = Users.get_user(message.from_user.id)
     user.price = current.part_row(message.text)
     bot.send_message(message.from_user.id,
                      'Введите удаленность, например 1 - 2')
@@ -119,8 +116,7 @@ def get_current_hotel(message: Any) -> None:
 @logging
 def get_length(message: Any) -> None:
     """фунция запрос диапозона расстояний до центра """
-    request_user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                                  '', 0, '', 0)
+    request_user = Users.get_user(message.from_user.id)
     request_user.perimeter = current.part_row(message.text)
     bot.send_message(message.from_user.id,
                      'Количество отелей, которые необходимо вывести в результате (не более 25)')
@@ -130,8 +126,7 @@ def get_length(message: Any) -> None:
 @logging
 def get_count_hotel(message: Any) -> None:
     """фунция запрос количества отелей """
-    request_user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                                  '', 0, '', 0)
+    request_user = Users.get_user(message.from_user.id)
     request_user.count_hotel = ''
     request_user.count_hotel = message.text
     # если количество отелей больше 25 или введен некорректно, то бот запрашивает информацию еще раз
@@ -147,8 +142,7 @@ def get_count_hotel(message: Any) -> None:
 @logging
 def get_date_in(message: Any) -> None:
     """функция запроса даты заезда в формате день-месяц-год. Форма разделителя не важна"""
-    request_user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                                  '', 0, '', 0)
+    request_user = Users.get_user(message.from_user.id)
     request_user.checkin = ''
     # Проверка даты на корректность. Формат день-месяц-год. В случае некорректности вернуть пустую строку в класс
     request_user.checkin = current.date_in_out(message.text)
@@ -166,8 +160,7 @@ def get_date_out(message: Any) -> None:
     функция обработки запроса даты выезда в формате день-месяц-год. Форма разделителя не важна
     на вход поступает сообщение бота с датой
     """
-    request_user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                                  '', 0, '', 0)
+    request_user = Users.get_user(message.from_user.id)
     request_user.checkout = ''
     # Проверка даты на корректность. Формат день-месяц-год. В случае некорректности вернуть пустую строку в класс
     request_user.checkout = current.date_in_out(message.text)
@@ -186,8 +179,7 @@ def get_answer_photo(message: Any) -> None:
     функция обработки запроса о необходимости подгрузки фотографий отеля
     на вход поступает сообщение бота с ответом "Да/нет" (не важно какими буквами)
     """
-    request_user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                                  '', 0, '', 0)
+    request_user = Users.get_user(message.from_user.id)
     request_user.photo = ''
     request_user.photo = message.text.lower()
     if request_user.photo == 'да' or request_user.photo == 'yes':
@@ -203,8 +195,7 @@ def get_answer_photo(message: Any) -> None:
 @logging
 def get_photo(message: Any) -> None:
     """функция обработки количества фотографий отеля"""
-    request_user = Users.get_user(str(datetime.datetime.now()), message.from_user.id, '', '', 0, '', '', '', '', '',
-                                  '', 0, '', 0)
+    request_user = Users.get_user(message.from_user.id)
     if message.text.isdigit():
         request_user.count_photo = int(message.text)
         get_answer(request_user)
@@ -243,13 +234,17 @@ def get_answer(cls) -> None:
         else:
 
             photo_hotel = []
-            for i_count in range(len(answer)):
+            if answer:
+                flag = len(answer)
+            else:
+                flag = []
+            for i_count in range(flag):
                 if cls.photo == 'да':
                     if (i_count + 1) % cls.count_photo == 0:
-                        row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\nссылка на сайте' \
-                              ' - {}\n'.format(answer[i_count]['name'], answer[i_count]['current'],
-                                               answer[i_count]['remoteness'], answer[i_count]['address'],
-                                               answer[i_count]['req_web'])
+                        row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\n' \
+                              'ссылка на сайте - {}\n'.\
+                            format(answer[i_count]['name'], answer[i_count]['current'], answer[i_count]['remoteness'],
+                                   answer[i_count]['address'], answer[i_count]['req_web'])
                         bot.send_message(cls.user_id, row)
                         photo_hotel.append(answer[i_count]['req_photo'])
                         photo_hotel = []

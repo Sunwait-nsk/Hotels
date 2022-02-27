@@ -8,6 +8,7 @@ from typing import Callable, Any
 load_dotenv('.env')
 bot = telebot.TeleBot(os.getenv('TOKEN'))
 api_key = os.getenv('rapidapi_key')
+password = os.getenv('password')
 
 
 def logging(called: Callable) -> Callable:
@@ -16,17 +17,15 @@ def logging(called: Callable) -> Callable:
     @functools.wraps(called)
     def wrapped_function(*args, **kwargs) -> Any:
         result = ''
-
-        print("Вызывается функция {}\tПозиционные аргументы{}\tИменованные аргументы".format(called, args, kwargs))
-        try:
-
-            result = called(*args, **kwargs)
-            print('функция {} завершилась успешно'.format(called.__name__))
-
-        except SyntaxError:
-
-            print('Функция не найдена')
-        return result
+        with open("sample.log", 'a') as log_file:
+            log_file.write("Вызывается функция {}\tПозиционные аргументы{}\tИменованные аргументы\n"
+                           .format(called, args, kwargs))
+            try:
+                result = called(*args, **kwargs)
+                log_file.write('функция {} завершилась успешно\n'.format(called.__name__))
+            except SyntaxError:
+                log_file.write('Функция не найдена\n')
+            return result
     return wrapped_function
 
 
