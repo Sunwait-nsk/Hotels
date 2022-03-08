@@ -39,7 +39,9 @@ def read_hotel(id_in: int) -> str:
             row_answer = ''
             for element in out:
                 if element.id_answer == id_in:
-                    row_answer += "{} {} {}\n".format(element.name, element.current, element.address)
+                    if not(element.name in row_answer):
+                        row_answer += "{} {} {}\n".format(element.name, element.current, element.address)
+
             return row_answer
         except InternalError as px:
             print(str(px))

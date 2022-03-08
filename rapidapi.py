@@ -76,24 +76,27 @@ def hotels_list(cls) -> tuple:
             print('Ошибка:')
         else:
             data = json.loads(response.text)
+
             result_hotel = []
             number_answer = 0
             # обработка результата запроса и формирование списка отелей
-            for element in data["data"]['body']['searchResults']['results']:
-                number_answer += 1
-                remoteness = element['landmarks'][0]['distance']  # удаленность
-                current_hotel = element['ratePlan']['price']['current']  # цена
-                url_hotels = url_hotel(cls, element['id'])  # формируем ссылку
-                try:
-                    if element['address']["streetAddress"]:
-                        result_hotel.append([element['name'], element['address']["streetAddress"], current_hotel,
-                                             remoteness, element['id'], url_hotels])
-                        answer.append(hotels_photo(cls, element['name'], element['address']["streetAddress"],
-                                                   current_hotel, remoteness, element['id'], url_hotels))
-                except KeyError:
-                    result_hotel.append([element['name'], '', current_hotel, remoteness, element['id'], url_hotels])
-                    answer.append(hotels_photo(cls, element['name'], '', current_hotel, remoteness, element['id'],
-                                               url_hotels))
+            if data["data"]['body']['searchResults']['results']:
+                for element in data["data"]['body']['searchResults']['results']:
+                    number_answer += 1
+                    remoteness = element['landmarks'][0]['distance']  # удаленность
+                    current_hotel = element['ratePlan']['price']['current']  # цена
+                    url_hotels = url_hotel(cls, element['id'])  # формируем ссылку
+                    try:
+                        if element['address']["streetAddress"]:
+                            result_hotel.append([element['name'], element['address']["streetAddress"], current_hotel,
+                                                 remoteness, element['id'], url_hotels])
+                            answer.append(hotels_photo(cls, element['name'], element['address']["streetAddress"],
+                                                       current_hotel, remoteness, element['id'], url_hotels))
+                    except KeyError:
+                        result_hotel.append([element['name'], '', current_hotel, remoteness, element['id'], url_hotels])
+                        answer.append(hotels_photo(cls, element['name'], '', current_hotel, remoteness, element['id'],
+                                                   url_hotels))
+
                 # ответ с фотографиями
                 # возврат списка из отелей в виде [название, адрес, цена, id отеля, ссылка,[список фотографий]]
             if number_answer != cls.count_hotel:
@@ -212,7 +215,7 @@ def hotels_photo(cls, name: str, address: str, current: str, remoteness: str, id
         plenty.append(element["baseUrl"])
     if cls.photo == 'да':
         for i_count in range(int(cls.count_photo)):
-            image_hotel.append(re.sub(r'{size}', 's', plenty[i_count]))  # установка размера фото
+            image_hotel.append(re.sub(r'{size}', 'y', plenty[i_count]))  # установка размера фото
             count_photo = cls.count_photo
     result_photo = [cls.answer, cls.count_hotel, name, current, remoteness, address, id_hotel, url_h,
                     count_photo, image_hotel]
@@ -224,10 +227,10 @@ def url_hotel(cls, id_hotel) -> str:
     Формирование текстовой ссылки на отель на сайте Hotels.com
     https://ru.hotels.com/ho203480/?q-check-in=2022-01-08&q-check-out=2022-01-15&q-rooms=1&q-room-0-adults=1&q-room-0-children=0
     """
-    day, month, year = re.split(r'\W+', cls.checkout)
-    checkout = "-".join([year, month, day])
-    day, month, year = re.split(r'\W+', cls.checkin)
-    checkin = "-".join([year, month, day])
+    day, month, year = cls.checkout.day, cls.checkout.month, cls.checkout.year
+    checkout = "-".join([str(year), str(month), str(day)])
+    day, month, year = cls.checkin.day, cls.checkin.month, cls.checkin.year
+    checkin = "-".join([str(year), str(month), str(day)])
     pattern_url = "https://ru.hotels.com/ho{}/?q-check-in={}&q-check-out={}&" \
                   "q-rooms=1&q-room-0-adults=1&q-room-0-children=0".format(id_hotel, checkin, checkout)
     return pattern_url

@@ -7,6 +7,7 @@ import geo_city
 import add_history
 import add_answer
 import read_history
+import datetime
 
 
 @logging
@@ -52,30 +53,30 @@ def history(message: Any) -> None:
     """
     request_user = Users(message.from_user.id)
     request_user.team = '/history'
-    request_user.answer = add_history.add_history(user_id=request_user.user_id,
-                                                  team=request_user.team,
-                                                  city=request_user.city,
-                                                  count_hotel=request_user.count_hotel,
-                                                  checkin=request_user.checkin,
-                                                  checkout=request_user.checkout,
-                                                  photo=request_user.photo,
-                                                  count_photo=request_user.count_photo,
-                                                  price=request_user.price,
-                                                  perimeter=request_user.perimeter)  # добавляем в БД history запрос
+    #request_user.answer = add_history.add_history(user_id=request_user.user_id,
+     #                                             team=request_user.team,
+      #                                            city=request_user.city,
+       #                                           count_hotel=request_user.count_hotel,
+        #                                          checkin=request_user.checkin,
+         #                                         checkout=request_user.checkout,
+          #                                        photo=request_user.photo,
+           #                                       count_photo=request_user.count_photo,
+            #                                      price=request_user.price,
+             #                                     perimeter=request_user.perimeter)  # добавляем в БД history запрос
     bot.send_message(message.from_user.id, 'Последние 5 записей поиска')
     # вывод ответов по последним 5 запросам
     number = 0
     row_info = read_history.read()
     for element in row_info:
+        print(element)
         row = 'Дата  - {} ---- команда - {}\nГород - {} \nОтели - {}\n'.\
             format(element[1], element[0], element[2], element[4])
-        count_photo = int(element[3])
-        if count_photo != 0:
-            number += 1
-            if number % count_photo == 0:
-                bot.send_message(message.from_user.id, row)
-        else:
-            bot.send_message(message.from_user.id, row)
+        bot.send_message(message.from_user.id, row)
+                #number = 1
+          #  if number % count_photo == 0:
+           #     bot.send_message(message.from_user.id, row)
+        #else:
+        #bot.send_message(message.from_user.id, row)
 
 
 @logging
@@ -130,12 +131,12 @@ def get_count_hotel(message: Any) -> None:
     request_user.count_hotel = ''
     request_user.count_hotel = message.text
     # если количество отелей больше 25 или введен некорректно, то бот запрашивает информацию еще раз
-    if request_user.count_hotel.isdigit() and int(request_user.count_hotel) <= 25:
-        bot.send_message(message.from_user.id, 'Дата заезда по формату дата-месяц-год')
+    if request_user.count_hotel.isdigit() and int(request_user.count_hotel) <= 20:
+        bot.send_message(message.from_user.id, 'Дата заезда по формату DD MM YYYY')
         bot.register_next_step_handler(message, get_date_in)
     else:
         bot.send_message(message.from_user.id, 'Количество отелей введено некорректно, введите цифрами пожалуйста. '
-                                               'Не более 25')
+                                               'Не более 20')
         bot.register_next_step_handler(message, get_count_hotel)
 
 
@@ -145,12 +146,13 @@ def get_date_in(message: Any) -> None:
     request_user = Users.get_user(message.from_user.id)
     request_user.checkin = ''
     # Проверка даты на корректность. Формат день-месяц-год. В случае некорректности вернуть пустую строку в класс
-    request_user.checkin = current.date_in_out(message.text)
+    request_user.checkin = current.date_in_out(message.text, request_user.datetime)
+
     if request_user.checkin != '' and request_user.checkin:
-        bot.send_message(message.from_user.id, 'Дата выезда в формате день-месяц-год')
+        bot.send_message(message.from_user.id, 'Дата выезда в формате DD MM YYYY')
         bot.register_next_step_handler(message, get_date_out)
     else:
-        bot.send_message(message.from_user.id, 'Некоректный ввод. Вводим дату по формату дата-месяц-год')
+        bot.send_message(message.from_user.id, 'Некоректный ввод. Вводим дату по формату DD MM YYYY')
         bot.register_next_step_handler(message, get_date_in)
 
 
@@ -163,13 +165,16 @@ def get_date_out(message: Any) -> None:
     request_user = Users.get_user(message.from_user.id)
     request_user.checkout = ''
     # Проверка даты на корректность. Формат день-месяц-год. В случае некорректности вернуть пустую строку в класс
-    request_user.checkout = current.date_in_out(message.text)
-    if request_user.checkout != '' and request_user.checkout:
-        bot.send_message(message.from_user.id,
-                         'Необходимость загрузки и вывода фотографий для каждого отеля (“Да/Нет”)')
+    request_user.checkout = current.date_in_out(message.text, request_user.datetime)
+
+    delta = current.delta_date(request_user.checkout, request_user.checkin)
+    if request_user.checkout and delta:
+        bot.send_message(message.from_user.id, 'Необходимость загрузки и '
+                                               'вывода фотографий для каждого отеля (“Да/Нет”)')
         bot.register_next_step_handler(message, get_answer_photo)
     else:
-        bot.send_message(message.from_user.id, 'Некоректный ввод. Вводим дату по формату дата-месяц-год')
+        bot.send_message(message.from_user.id, 'Некоректный ввод... либо дата выезда раньше даты заезда. '
+                                               'Вводим дату по формату DD MM YYYY')
         bot.register_next_step_handler(message, get_date_out)
 
 
@@ -207,11 +212,14 @@ def get_answer(cls) -> None:
     key_user = add_history.add_history(user_id=cls.user_id, team=cls.team, city=cls.city, count_hotel=cls.count_hotel,
                                        checkin=cls.checkin, checkout=cls.checkout, photo=cls.photo,
                                        count_photo=cls.count_photo, price=cls.price, perimeter=cls.perimeter)
-
+    print(key_user)
     if key_user:
         if not answer:
+            bot.send_message(cls.user_id, 'Подождите. Происходит поиск отелей')
             cls.city_id = rapidapi.hotel_id(cls)
             cls.count_hotel, answer = rapidapi.hotels_list(cls)
+            if len(answer) == 0:
+                bot.send_message(cls.user_id, 'Нет результатов')
             for i_count in range(int(cls.count_hotel)):
                 if cls.photo == 'да':
                     row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\nссылка на сайте - {}\n'.\
@@ -260,3 +268,4 @@ def get_answer(cls) -> None:
                                answer[i_count]['address'],
                                answer[i_count]['req_web'])
                     bot.send_message(cls.user_id, row)
+
