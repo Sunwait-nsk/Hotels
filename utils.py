@@ -24,6 +24,7 @@ class Users:
         self.team = None  # команда в запросе
         self.count_photo = 0  # количество фото в запросе
         self.req_photo = None  # ссылки на фото
+        self.day = 1
         Users.add_user(user_id, self)
 
     def __str__(self):

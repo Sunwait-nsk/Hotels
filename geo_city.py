@@ -1,4 +1,6 @@
 from peewee import InternalError
+import requests
+import loader
 from loader import logging
 from models import City, dbhandle_city
 
@@ -15,10 +17,15 @@ from models import City, dbhandle_city
 @logging
 def city(name: str) -> str:
     with dbhandle_city:
+        name = name.capitalize()
         try:
-            name = name.capitalize()
-            city_name = City.get(City.city == name)
-            return city_name.country
+            result = '', ''
+            city_name = City.select()
+            for city in city_name:
+                if city.city == name:
+                    result = city.city_en, city.country_en
+            return result
+
         except InternalError as px:
             print(str(px))
-            return ''
+            return []

@@ -9,7 +9,7 @@ load_dotenv('.env')
 bot = telebot.TeleBot(os.getenv('TOKEN'))
 api_key = os.getenv('rapidapi_key')
 password = os.getenv('password')
-
+geo_key = os.getenv('geo_key')
 
 def logging(called: Callable) -> Callable:
     """Декоратор. Логирование работы функций
@@ -17,9 +17,9 @@ def logging(called: Callable) -> Callable:
     @functools.wraps(called)
     def wrapped_function(*args, **kwargs) -> Any:
         result = ''
-        with open("sample.log", 'a') as log_file:
-            log_file.write("Вызывается функция {}\tПозиционные аргументы{}\tИменованные аргументы\n"
-                           .format(called, args, kwargs))
+        with open("sample.log", 'a', encoding="utf-8") as log_file:
+            log_file.write("Вызывается функция {}\tПозиционные аргументы{}\tИменованные аргументы\n".
+                           format(called, args, kwargs))
             try:
                 result = called(*args, **kwargs)
                 log_file.write('функция {} завершилась успешно\n'.format(called.__name__))

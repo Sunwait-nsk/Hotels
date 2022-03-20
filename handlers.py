@@ -18,7 +18,7 @@ def lowprice(message: Any) -> None:
     """
     user = Users(message.from_user.id)  # добавили пользователя по id
     user.team = '/lowprice'
-    bot.send_message(message.from_user.id, "Введите город")
+    bot.send_message(message.from_user.id, "Введите название города")
     bot.register_next_step_handler(message, get_city)
 
 
@@ -30,7 +30,7 @@ def highprice(message: Any) -> None:
         """
     user = Users(message.from_user.id)
     user.team = '/highprice'
-    bot.send_message(message.from_user.id, "Введите город")
+    bot.send_message(message.from_user.id, "Введите название города")
     bot.register_next_step_handler(message, get_city)
 
 
@@ -42,7 +42,7 @@ def bestdeal(message: Any) -> None:
             """
     user = Users(message.from_user.id)
     user.team = '/bestdeal'
-    bot.send_message(message.from_user.id, "Введите город")
+    bot.send_message(message.from_user.id, "Введите название города")
     bot.register_next_step_handler(message, get_city)
 
 
@@ -63,13 +63,13 @@ def history(message: Any) -> None:
            #                                       count_photo=request_user.count_photo,
             #                                      price=request_user.price,
              #                                     perimeter=request_user.perimeter)  # добавляем в БД history запрос
-    bot.send_message(message.from_user.id, 'Последние 5 записей поиска')
+    bot.send_message(message.from_user.id, 'Последние 6 записей поиска')
     # вывод ответов по последним 5 запросам
     number = 0
     row_info = read_history.read()
     for element in row_info:
         print(element)
-        row = 'Дата  - {} ---- команда - {}\nГород - {} \nОтели - {}\n'.\
+        row = 'Дата  - {} ---- команда - {},\nГород - {} ,\nОтели(названия): \n{}\n'.\
             format(element[1], element[0], element[2], element[4])
         bot.send_message(message.from_user.id, row)
                 #number = 1
@@ -79,7 +79,7 @@ def history(message: Any) -> None:
         #bot.send_message(message.from_user.id, row)
 
 
-@logging
+
 def get_city(message: Any) -> None:
     """
     Обработка названия города и передача дальнейшего управления следующему модулю
@@ -88,12 +88,12 @@ def get_city(message: Any) -> None:
     user.city, user.country = '', ''
     # Обращаемся к БД городов, что бы получить список город на русском и страна на английском
     # заодно проверяем корректность названия города. В противном случае бот запрашивает город заново
-    user.country = geo_city.city(message.text)
-    user.city = message.text
+    user.city, user.country = geo_city.city(message.text)
+
     if user.country != '':
         if user.team == '/bestdeal':
             bot.send_message(message.from_user.id,
-                             'Введите диапозон цен, например 1000 - 2000')
+                             'Введите диапазон цен, например 1000 - 2000')
             bot.register_next_step_handler(message, get_current_hotel)
         else:
             bot.send_message(message.from_user.id,
@@ -109,9 +109,12 @@ def get_current_hotel(message: Any) -> None:
     """фунция запрос диапозона цен отелей """
     user = Users.get_user(message.from_user.id)
     user.price = current.part_row(message.text)
-    bot.send_message(message.from_user.id,
-                     'Введите удаленность, например 1 - 2')
-    bot.register_next_step_handler(message, get_length)
+    if len(user.price) == 1:
+        bot.send_message(message.from_user.id, 'Введите диапазон цен, а не одно число, например 1000 - 2000')
+        bot.register_next_step_handler(message, get_current_hotel)
+    elif len(user.price) == 2:
+        bot.send_message(message.from_user.id, 'Введите удаленность, например 1 - 2')
+        bot.register_next_step_handler(message, get_length)
 
 
 @logging
@@ -119,9 +122,13 @@ def get_length(message: Any) -> None:
     """фунция запрос диапозона расстояний до центра """
     request_user = Users.get_user(message.from_user.id)
     request_user.perimeter = current.part_row(message.text)
-    bot.send_message(message.from_user.id,
-                     'Количество отелей, которые необходимо вывести в результате (не более 25)')
-    bot.register_next_step_handler(message, get_count_hotel)
+    if len(request_user.perimeter) == 1:
+        bot.send_message(message.from_user.id, 'Введите диапазон расстояний, а не одно число, например 1 - 2')
+        bot.register_next_step_handler(message, get_length)
+    elif len(request_user.perimeter) == 2:
+        bot.send_message(message.from_user.id, 'Количество отелей, которые необходимо вывести в результате '
+                                               '(не более 20)')
+        bot.register_next_step_handler(message, get_count_hotel)
 
 
 @logging
@@ -149,6 +156,7 @@ def get_date_in(message: Any) -> None:
     request_user.checkin = current.date_in_out(message.text, request_user.datetime)
 
     if request_user.checkin != '' and request_user.checkin:
+
         bot.send_message(message.from_user.id, 'Дата выезда в формате DD MM YYYY')
         bot.register_next_step_handler(message, get_date_out)
     else:
@@ -169,6 +177,7 @@ def get_date_out(message: Any) -> None:
 
     delta = current.delta_date(request_user.checkout, request_user.checkin)
     if request_user.checkout and delta:
+        request_user.day = current.days(request_user.checkin, request_user.checkout)
         bot.send_message(message.from_user.id, 'Необходимость загрузки и '
                                                'вывода фотографий для каждого отеля (“Да/Нет”)')
         bot.register_next_step_handler(message, get_answer_photo)
@@ -212,17 +221,19 @@ def get_answer(cls) -> None:
     key_user = add_history.add_history(user_id=cls.user_id, team=cls.team, city=cls.city, count_hotel=cls.count_hotel,
                                        checkin=cls.checkin, checkout=cls.checkout, photo=cls.photo,
                                        count_photo=cls.count_photo, price=cls.price, perimeter=cls.perimeter)
-    print(key_user)
     if key_user:
         if not answer:
             bot.send_message(cls.user_id, 'Подождите. Происходит поиск отелей')
             cls.city_id = rapidapi.hotel_id(cls)
-            cls.count_hotel, answer = rapidapi.hotels_list(cls)
-            if len(answer) == 0:
+            if cls.team == "bestdeal":
+                cls.count_hotel, answer = rapidapi.hotels_list_bestdeal(cls)
+            else:
+                cls.count_hotel, answer = rapidapi.hotels_list(cls)
+            if not answer:
                 bot.send_message(cls.user_id, 'Нет результатов')
             for i_count in range(int(cls.count_hotel)):
-                if cls.photo == 'да':
-                    row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\nссылка на сайте - {}\n'.\
+                if cls.photo == 'да' or cls.photo == 'yes':
+                    row = '{}\nитоговая стоимость - {},\nудаленность от центра города - {},\nадрес - {},\nссылка на сайте - {}\n'.\
                         format(answer[i_count][2], answer[i_count][3], answer[i_count][4],
                                answer[i_count][5], answer[i_count][7])
                     bot.send_message(cls.user_id, row)
@@ -232,7 +243,7 @@ def get_answer(cls) -> None:
                                               answer[i_count][3], answer[i_count][4], answer[i_count][5],
                                               answer[i_count][7], cls.count_photo, answer[i_count][9][i_photo])
                 else:
-                    row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\nссылка на сайте - {}\n'.\
+                    row = '{}\nитоговая стоимость - {},\nудаленность от центра города - {},\nадрес - {},\nссылка на сайте - {}\n'.\
                         format(answer[i_count][2], answer[i_count][3], answer[i_count][4],
                                answer[i_count][5], answer[i_count][7])
                     bot.send_message(cls.user_id, row)
@@ -249,7 +260,7 @@ def get_answer(cls) -> None:
             for i_count in range(flag):
                 if cls.photo == 'да':
                     if (i_count + 1) % cls.count_photo == 0:
-                        row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\n' \
+                        row = '{}\nитоговая стоимость - {},\nудаленность от центра города - {},\nадрес - {},\n' \
                               'ссылка на сайте - {}\n'.\
                             format(answer[i_count]['name'], answer[i_count]['current'], answer[i_count]['remoteness'],
                                    answer[i_count]['address'], answer[i_count]['req_web'])
@@ -261,7 +272,7 @@ def get_answer(cls) -> None:
                     else:
                         photo_hotel.append(answer[i_count]['req_photo'])
                 else:
-                    row = '{}\nстоимость - {}\nудаленность от центра города - {}\nадрес - {}\nссылка на сайте - {}\n'. \
+                    row = '{}\nитоговая стоимость - {},\nудаленность от центра города - {},\nадрес - {},\nссылка на сайте - {}\n'. \
                         format(answer[i_count]['name'],
                                answer[i_count]['current'],
                                answer[i_count]['remoteness'],

@@ -1,4 +1,4 @@
-import peewee
+from peewee import InternalError
 from loader import logging
 from models import History, dbhandle
 
